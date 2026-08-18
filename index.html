@@ -11,37 +11,38 @@
   <div class="container">
     <header>
       <h1>🥗 Planejador de Nutrição</h1>
-      <p>Gerenciador dinâmico de cardápio com base no seu estoque</p>
+      <p>Gerenciador inteligente com limite semanal</p>
     </header>
 
-    <!-- PAINEL DE METAS DIÁRIAS -->
+    <!-- 1. PAINEL DE METAS DIÁRIAS -->
     <section class="card metas">
       <h2>🎯 Meta Diária</h2>
       <div class="grid-metas">
-        <div class="meta-item">
-          <span class="label">Calorias</span>
-          <span class="valor">3.300 <small>kcal</small></span>
-        </div>
-        <div class="meta-item">
-          <span class="label">Proteínas</span>
-          <span class="valor">195 <small>g</small></span>
-        </div>
-        <div class="meta-item">
-          <span class="label">Carboidratos</span>
-          <span class="valor">450 <small>g</small></span>
-        </div>
-        <div class="meta-item">
-          <span class="label">Gorduras</span>
-          <span class="valor">80 <small>g</small></span>
-        </div>
+        <div class="meta-item"><span class="label">Calorias</span><span class="valor">3.300 <small>kcal</small></span></div>
+        <div class="meta-item"><span class="label">Proteínas</span><span class="valor">195 <small>g</small></span></div>
+        <div class="meta-item"><span class="label">Carboidratos</span><span class="valor">450 <small>g</small></span></div>
+        <div class="meta-item"><span class="label">Gorduras</span><span class="valor">80 <small>g</small></span></div>
       </div>
     </section>
 
-    <!-- FORMULÁRIO PARA CADASTRAR NOVO ALIMENTO -->
+    <!-- 2. EXIBIÇÃO DO MENU GERADO (Movido para cima) -->
+    <section class="card menu-resultado" id="secao-menu">
+      <h2>🍽️ Seu Cardápio do Dia</h2>
+      
+      <button id="btn-gerar" class="btn-primary" style="margin-bottom: 16px;">🔄 Gerar Menu de Hoje</button>
+      
+      <div id="alertas-sistema"></div> <!-- Avisos de bloqueio de limite aparecem aqui -->
+      
+      <div id="conteudo-menu">
+        <p class="placeholder">Clique no botão acima para montar o cardápio com o estoque disponível.</p>
+      </div>
+
+      <button id="btn-confirmar" class="btn-success" style="display: none; margin-top: 16px;">✅ Confirmar Consumo de Hoje</button>
+    </section>
+
+    <!-- 3. FORMULÁRIO PARA CADASTRAR NOVO ALIMENTO -->
     <section class="card cadastro">
       <h2>➕ Cadastrar Novo Alimento</h2>
-      <p class="subtext">Insira as informações nutricionais por 100g (ou por unidade):</p>
-      
       <form id="form-alimento" class="form-grid">
         <div class="input-group full">
           <input type="text" id="nome-alimento" placeholder="Nome do Alimento (ex: Pão Integral)" required>
@@ -52,6 +53,9 @@
             <option value="carbo">Carboidrato</option>
             <option value="gordura">Gordura</option>
           </select>
+        </div>
+        <div class="input-group">
+          <input type="number" id="limite-alimento" placeholder="Máx dias/semana (ex: 2)" step="1" title="Deixe em branco se puder comer todo dia">
         </div>
         <div class="input-group">
           <input type="number" id="kcal-alimento" placeholder="Kcal / 100g" step="0.1" required>
@@ -65,29 +69,15 @@
         <div class="input-group">
           <input type="number" id="gord-alimento" placeholder="Gordura (g)" step="0.1" required>
         </div>
-
         <button type="submit" class="btn-secondary">Cadastrar Alimento</button>
       </form>
     </section>
 
-    <!-- GERENCIADOR DE ESTOQUE DE ALIMENTOS -->
+    <!-- 4. GERENCIADOR DE ESTOQUE -->
     <section class="card estoque">
       <h2>📦 Alimentos no Estoque</h2>
-      <p class="subtext">Marque o que você tem disponível em casa hoje:</p>
-      
-      <div id="lista-estoque" class="lista-checkboxes">
-        <!-- Os alimentos aparecem aqui dinamicamente -->
-      </div>
-
-      <button id="btn-gerar" class="btn-primary">🔄 Gerar Menu de Hoje</button>
-    </section>
-
-    <!-- EXIBIÇÃO DO MENU GERADO -->
-    <section class="card menu-resultado" id="secao-menu">
-      <h2>🍽️ Seu Cardápio do Dia</h2>
-      <div id="conteudo-menu">
-        <p class="placeholder">Marque os alimentos do seu estoque acima e clique em "Gerar Menu de Hoje".</p>
-      </div>
+      <p class="subtext">Marque o que tem em casa:</p>
+      <div id="lista-estoque" class="lista-checkboxes"></div>
     </section>
 
   </div>

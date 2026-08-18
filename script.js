@@ -7,7 +7,7 @@ const METAS = {
   refeicoes: 5
 };
 
-// Banco de Alimentos Inicial (com porção base de 100g para cálculos precisos)
+// Banco de Alimentos Inicial (com porção base de 100g)
 const alimentosIniciais = [
   { id: 'frango', nome: 'Peito de Frango Grelhado', cat: 'proteina', prot100: 31, carb100: 0, gord100: 3.6, kcal100: 165, emEstoque: true },
   { id: 'ovos', nome: 'Ovo Inteiro (unidade ~50g)', cat: 'proteina', prot100: 12.6, carb100: 0.8, gord100: 9.6, kcal100: 144, emEstoque: true },
@@ -18,14 +18,14 @@ const alimentosIniciais = [
   { id: 'leite', nome: 'Leite Integral (ml)', cat: 'proteina', prot100: 3, carb100: 4.5, gord100: 3, kcal100: 60, emEstoque: true }
 ];
 
-// Carrega o estoque salvo ou o inicial
+// Carrega o estoque salvo no navegador ou o inicial
 let alimentos = JSON.parse(localStorage.getItem('meuEstoque')) || alimentosIniciais;
 
 function salvarEstoque() {
   localStorage.setItem('meuEstoque', JSON.stringify(alimentos));
 }
 
-// Renderiza a lista de alimentos com checkboxes
+// Renderiza a lista de checkboxes
 function carregarEstoque() {
   const container = document.getElementById('lista-estoque');
   container.innerHTML = '';
@@ -35,7 +35,7 @@ function carregarEstoque() {
     label.className = 'item-checkbox';
     label.innerHTML = `
       <input type="checkbox" id="${item.id}" ${item.emEstoque ? 'checked' : ''} onchange="alternarEstoque('${item.id}')">
-      <span>${item.nome}</span>
+      <span>${item.nome} <small style="color: #64748b;">(${item.cat})</small></span>
     `;
     container.appendChild(label);
   });
@@ -49,7 +49,37 @@ function alternarEstoque(id) {
   }
 }
 
-// Algoritmo de Distribuição e Cálculo Nutricional
+// Cadastrar novo alimento via formulário
+document.getElementById('form-alimento').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const nome = document.getElementById('nome-alimento').value;
+  const cat = document.getElementById('cat-alimento').value;
+  const kcal100 = parseFloat(document.getElementById('kcal-alimento').value);
+  const prot100 = parseFloat(document.getElementById('prot-alimento').value);
+  const carb100 = parseFloat(document.getElementById('carb-alimento').value);
+  const gord100 = parseFloat(document.getElementById('gord-alimento').value);
+
+  const novoAlimento = {
+    id: 'custom_' + Date.now(),
+    nome: nome,
+    cat: cat,
+    prot100: prot100,
+    carb100: carb100,
+    gord100: gord100,
+    kcal100: kcal100,
+    emEstoque: true
+  };
+
+  alimentos.push(novoAlimento);
+  salvarEstoque();
+  carregarEstoque();
+
+  // Limpa o formulário
+  this.reset();
+});
+
+// Algoritmo de Gerar o Menu
 function gerarMenuDinamico() {
   const disponiveis = alimentos.filter(a => a.emEstoque);
   const containerMenu = document.getElementById('conteudo-menu');
@@ -62,8 +92,6 @@ function gerarMenuDinamico() {
     return;
   }
 
-  // Divisão simples de metas por refeição (~5 refeições)
-  // Refeições principais (Almoço/Jantar) levam maior carga de Carbo/Proteína
   const frango = disponiveis.find(a => a.id === 'frango');
   const ovos = disponiveis.find(a => a.id === 'ovos');
   const arroz = disponiveis.find(a => a.id === 'arroz');
@@ -72,27 +100,41 @@ function gerarMenuDinamico() {
   const pasta = disponiveis.find(a => a.id === 'pasta_amendoim');
   const leite = disponiveis.find(a => a.id === 'leite');
 
-  // Ajustes dinâmicos de porção baseados no que está marcado
-  let qtdFrango = frango && frango.emEstoque ? 220 : 0; // gramas por refeição principal
-  let qtdArroz = arroz && arroz.emEstoque ? 350 : 0;   // gramas por refeição principal
-  let qtdOvos = ovos && ovos.emEstoque ? 3 : 0;        // unidades no café/ceia
-  let qtdAveia = aveia && aveia.emEstoque ? 60 : 0;    // gramas
-  let qtdPasta = pasta && pasta.emEstoque ? 30 : 0;    // gramas
+  // Pega alimentos customizados adicionados pelo usuário
+  const extras = disponiveis.filter(a => a.id.startsWith('custom_'));
 
-  // Recalculo inteligente se algum item faltar
+  let qtdFrango = frango && frango.emEstoque ? 220 : 0;
+  let qtdArroz = arroz && arroz.emEstoque ? 350 : 0;
+  let qtdOvos = ovos && ovos.emEstoque ? 3 : 0;
+  let qtdAveia = aveia && aveia.emEstoque ? 60 : 0;
+  let qtdPasta = pasta && pasta.emEstoque ? 30 : 0;
+
   if (!frango || !frango.emEstoque) {
-    qtdOvos += 2; // compensa proteína com mais ovos se não houver frango
+    qtdOvos += 2;
   }
   if (!arroz || !arroz.emEstoque) {
-    qtdAveia += 40; // compensa carbo com mais aveia se não houver arroz
+    qtdAveia += 40;
   }
 
-  // Montagem do HTML das Refeições
+  let extrasHTML = '';
+  if (extras.length > 0) {
+    extrasHTML = `
+      <div class="refeicao-card" style="border-left-color: #10b981;">
+        <h3>💡 Itens Extras Cadastrados em Uso</h3>
+        <ul>
+          ${extras.map(e => `<li>• ${e.nome}: ~100g/ml distribuídos no dia</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
   const menuHTML = `
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
       <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Total Estimado do Menu:</h4>
       <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.280 kcal</strong> | Proteínas: <strong>~192g</strong> | Carboidratos: <strong>~445g</strong> | Gorduras: <strong>~78g</strong></p>
     </div>
+
+    ${extrasHTML}
 
     <div class="refeicao-card">
       <h3>☕ Refeição 1: Café da Manhã</h3>

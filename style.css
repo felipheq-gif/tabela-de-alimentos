@@ -159,3 +159,45 @@ header p {
   color: #cbd5e1;
   margin-bottom: 4px;
 }
+/* Estilos do Formulário */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.input-group.full {
+  grid-column: span 2;
+}
+
+.form-grid input, .form-grid select {
+  width: 100%;
+  padding: 10px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 14px;
+}
+
+.form-grid input:focus, .form-grid select:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.btn-secondary {
+  grid-column: span 2;
+  padding: 12px;
+  background-color: #334155;
+  color: #f8fafc;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #475569;
+}

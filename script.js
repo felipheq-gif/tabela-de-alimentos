@@ -19,6 +19,10 @@ const alimentosIniciais = [
 
 let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
 
+function pegarDataDeHoje() {
+  return new Date().toLocaleDateString('pt-BR'); // Ex: "18/08/2026"
+}
+
 function salvarEstoque() {
   localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos));
 }
@@ -26,13 +30,21 @@ function salvarEstoque() {
 // Regra do Limite Semanal
 function podeConsumirHoje(item) {
   if (!item.limiteSemanal) return true; 
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = pegarDataDeHoje();
   if (item.historico && item.historico.includes(hoje)) return true; 
   
   const seteDiasAtras = new Date();
   seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
   
-  const consumosRecentes = (item.historico || []).filter(dataStr => new Date(dataStr) >= seteDiasAtras);
+  const consumosRecentes = (item.historico || []).filter(dataStr => {
+    // Converte a data do histórico (DD/MM/YYYY) para comparar
+    const partes = dataStr.split('/');
+    if(partes.length === 3) {
+      const dataHist = new Date(partes[2], partes[1] - 1, partes[0]);
+      return dataHist >= seteDiasAtras;
+    }
+    return false;
+  });
   return consumosRecentes.length < item.limiteSemanal;
 }
 
@@ -78,16 +90,15 @@ document.getElementById('form-alimento').addEventListener('submit', function(e) 
   this.reset();
 });
 
-// NOVA FUNÇÃO: O Check Individual por Refeição
+// Check Individual por Refeição
 function confirmarRefeicao(btnId, idsString) {
   const ids = idsString.split(',');
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = pegarDataDeHoje();
   
   ids.forEach(id => {
     const item = alimentos.find(a => a.id === id);
     if (item) {
       if (!item.historico) item.historico = [];
-      // Se não marcou hoje ainda, adiciona no histórico para descontar do limite semanal
       if (!item.historico.includes(hoje)) {
         item.historico.push(hoje);
       }
@@ -101,6 +112,33 @@ function confirmarRefeicao(btnId, idsString) {
   btn.innerHTML = '✅ Refeição Consumida';
   btn.classList.add('confirmado');
   btn.disabled = true;
+
+  // Atualiza a memória da tela para manter o botão verde ao recarregar
+  salvarTelaDoMenu();
+}
+
+// Salva o HTML gerado para não sumir ao recarregar
+function salvarTelaDoMenu() {
+  const conteudo = document.getElementById('conteudo-menu').innerHTML;
+  localStorage.setItem('menuVisualSalvo', conteudo);
+  localStorage.setItem('dataDoMenuSalvo', pegarDataDeHoje());
+}
+
+// Verifica se tem um menu salvo hoje quando o site abre
+function carregarMenuSalvo() {
+  const dataSalva = localStorage.getItem('dataDoMenuSalvo');
+  const hoje = pegarDataDeHoje();
+
+  if (dataSalva === hoje) {
+    const menuSalvo = localStorage.getItem('menuVisualSalvo');
+    if (menuSalvo) {
+      document.getElementById('conteudo-menu').innerHTML = menuSalvo;
+    }
+  } else {
+    // Se virou o dia, apaga a memória visual do dia anterior
+    localStorage.removeItem('menuVisualSalvo');
+    localStorage.removeItem('dataDoMenuSalvo');
+  }
 }
 
 function gerarMenuDinamico() {
@@ -125,7 +163,6 @@ function gerarMenuDinamico() {
   const temIogurte = checa('iogurte');
 
   let ingredienteExtraVitamina = "";
-  // Mapeia os IDs usados na Refeição 3
   let idsRef3 = 'leite,banana,aveia,leite_po,chia,creatina';
   
   if (temFarinhaLactea) {
@@ -138,7 +175,6 @@ function gerarMenuDinamico() {
     ingredienteExtraVitamina = "<li>• +1 Banana Prata (Compensação)</li><li>• +20g de Aveia em Flocos (Compensação)</li>";
   }
 
-  // Mapeia os IDs das outras Refeições
   const idsRef1 = (temPao ? 'pao' : 'batata_doce') + ',ovos';
   const idsRef2 = 'arroz,feijao,frango';
   const idsRef4 = 'arroz,feijao,frango';
@@ -207,11 +243,15 @@ function gerarMenuDinamico() {
   `;
 
   containerMenu.innerHTML = menuHTML;
-
-  // Como agora o check é por refeição, o script esconde o botão "Confirmar Tudo" se ele ainda existir no seu HTML
-  const btnAntigo = document.getElementById('btn-confirmar');
-  if(btnAntigo) btnAntigo.style.display = 'none';
+  
+  // Salva o visual recém-gerado
+  salvarTelaDoMenu();
 }
 
 document.getElementById('btn-gerar').addEventListener('click', gerarMenuDinamico);
-window.onload = carregarEstoque;
+
+// Ao iniciar a página, carrega o estoque e checa se já existe um cardápio salvo hoje
+window.onload = function() {
+  carregarEstoque();
+  carregarMenuSalvo();
+};

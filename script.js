@@ -20,7 +20,7 @@ const alimentosIniciais = [
 let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
 
 function pegarDataDeHoje() {
-  return new Date().toLocaleDateString('pt-BR'); // Ex: "18/08/2026"
+  return new Date().toLocaleDateString('pt-BR'); 
 }
 
 function salvarEstoque() {
@@ -37,7 +37,6 @@ function podeConsumirHoje(item) {
   seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
   
   const consumosRecentes = (item.historico || []).filter(dataStr => {
-    // Converte a data do histórico (DD/MM/YYYY) para comparar
     const partes = dataStr.split('/');
     if(partes.length === 3) {
       const dataHist = new Date(partes[2], partes[1] - 1, partes[0]);
@@ -107,24 +106,20 @@ function confirmarRefeicao(btnId, idsString) {
   
   salvarEstoque();
   
-  // Muda o botão para verde
   const btn = document.getElementById(btnId);
   btn.innerHTML = '✅ Refeição Consumida';
   btn.classList.add('confirmado');
   btn.disabled = true;
 
-  // Atualiza a memória da tela para manter o botão verde ao recarregar
   salvarTelaDoMenu();
 }
 
-// Salva o HTML gerado para não sumir ao recarregar
 function salvarTelaDoMenu() {
   const conteudo = document.getElementById('conteudo-menu').innerHTML;
   localStorage.setItem('menuVisualSalvo', conteudo);
   localStorage.setItem('dataDoMenuSalvo', pegarDataDeHoje());
 }
 
-// Verifica se tem um menu salvo hoje quando o site abre
 function carregarMenuSalvo() {
   const dataSalva = localStorage.getItem('dataDoMenuSalvo');
   const hoje = pegarDataDeHoje();
@@ -135,7 +130,6 @@ function carregarMenuSalvo() {
       document.getElementById('conteudo-menu').innerHTML = menuSalvo;
     }
   } else {
-    // Se virou o dia, apaga a memória visual do dia anterior
     localStorage.removeItem('menuVisualSalvo');
     localStorage.removeItem('dataDoMenuSalvo');
   }
@@ -187,7 +181,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍳 Refeição 1: Café da Manhã</h3>
+      <h3>🍳 Refeição 1: Café da Manhã (~500 kcal)</h3>
       <ul>
         ${temPao ? `<li>• 2 Pães Franceses (100g)</li>` : `<li>• 200g de Batata Doce Cozida (Substituto)</li>`}
         <li>• 3 Ovos Inteiros mexidos ou cozidos</li>
@@ -197,7 +191,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 2: Almoço</h3>
+      <h3>🍛 Refeição 2: Almoço (~920 kcal)</h3>
       <ul>
         <li>• 300g de Arroz Branco</li>
         <li>• 150g de Feijão Carioca</li>
@@ -208,7 +202,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🥤 Refeição 3: Café da Tarde (Vitamina)</h3>
+      <h3>🥤 Refeição 3: Café da Tarde (Vitamina) (~720 kcal)</h3>
       <ul>
         <li>• 300ml de Leite Integral</li>
         <li>• 1 Banana Prata</li>
@@ -222,7 +216,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 4: Jantar</h3>
+      <h3>🍛 Refeição 4: Jantar (~920 kcal)</h3>
       <ul>
         <li>• 300g de Arroz Branco</li>
         <li>• 150g de Feijão Carioca</li>
@@ -233,7 +227,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🌙 Refeição 5: Ceia</h3>
+      <h3>🌙 Refeição 5: Ceia (~240 kcal)</h3>
       <ul>
         ${temIogurte ? `<li>• 1 Pote de Iogurte Natural (170g)</li>` : `<li>• 2 Ovos Inteiros</li>`}
         ${temBatata ? `<li>• 150g de Batata Doce</li>` : `<li>• 40g de Aveia com 1 Banana</li>`}
@@ -244,13 +238,11 @@ function gerarMenuDinamico() {
 
   containerMenu.innerHTML = menuHTML;
   
-  // Salva o visual recém-gerado
   salvarTelaDoMenu();
 }
 
 document.getElementById('btn-gerar').addEventListener('click', gerarMenuDinamico);
 
-// Ao iniciar a página, carrega o estoque e checa se já existe um cardápio salvo hoje
 window.onload = function() {
   carregarEstoque();
   carregarMenuSalvo();

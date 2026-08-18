@@ -18,16 +18,14 @@ const alimentosIniciais = [
 ];
 
 let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
-let menuDeHoje = []; 
 
 function salvarEstoque() {
   localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos));
 }
 
-// Verifica regras de limite semanal
+// Regra do Limite Semanal
 function podeConsumirHoje(item) {
   if (!item.limiteSemanal) return true; 
-  
   const hoje = new Date().toISOString().split('T')[0];
   if (item.historico && item.historico.includes(hoje)) return true; 
   
@@ -63,7 +61,6 @@ function alternarEstoque(id) {
   }
 }
 
-// Formulário de novo alimento
 document.getElementById('form-alimento').addEventListener('submit', function(e) {
   e.preventDefault();
   const limiteInput = document.getElementById('limite-alimento').value;
@@ -81,24 +78,45 @@ document.getElementById('form-alimento').addEventListener('submit', function(e) 
   this.reset();
 });
 
-// A Lógica Inteligente de Montagem
+// NOVA FUNÇÃO: O Check Individual por Refeição
+function confirmarRefeicao(btnId, idsString) {
+  const ids = idsString.split(',');
+  const hoje = new Date().toISOString().split('T')[0];
+  
+  ids.forEach(id => {
+    const item = alimentos.find(a => a.id === id);
+    if (item) {
+      if (!item.historico) item.historico = [];
+      // Se não marcou hoje ainda, adiciona no histórico para descontar do limite semanal
+      if (!item.historico.includes(hoje)) {
+        item.historico.push(hoje);
+      }
+    }
+  });
+  
+  salvarEstoque();
+  
+  // Muda o botão para verde
+  const btn = document.getElementById(btnId);
+  btn.innerHTML = '✅ Refeição Consumida';
+  btn.classList.add('confirmado');
+  btn.disabled = true;
+}
+
 function gerarMenuDinamico() {
   const disponiveisParaHoje = alimentos.filter(a => a.emEstoque && podeConsumirHoje(a));
   const bloqueadosHoje = alimentos.filter(a => a.emEstoque && !podeConsumirHoje(a));
   
-  menuDeHoje = disponiveisParaHoje;
-
   const containerMenu = document.getElementById('conteudo-menu');
   const divAlertas = document.getElementById('alertas-sistema');
   divAlertas.innerHTML = '';
 
   if (bloqueadosHoje.length > 0) {
     bloqueadosHoje.forEach(item => {
-      divAlertas.innerHTML += `<div class="alerta-bloqueio">⚠️ <strong>${item.nome}</strong> atingiu o limite da semana e foi removido hoje. A vitamina será ajustada!</div>`;
+      divAlertas.innerHTML += `<div class="alerta-bloqueio">⚠️ <strong>${item.nome}</strong> atingiu o limite da semana e foi removido hoje.</div>`;
     });
   }
 
-  // Pegando o status de cada item essencial
   const checa = (id) => disponiveisParaHoje.some(a => a.id === id);
   const temPao = checa('pao');
   const temBatata = checa('batata_doce');
@@ -106,29 +124,40 @@ function gerarMenuDinamico() {
   const temMucilon = checa('mucilon');
   const temIogurte = checa('iogurte');
 
-  // Lógica da Vitamina (Rodízio)
   let ingredienteExtraVitamina = "";
+  // Mapeia os IDs usados na Refeição 3
+  let idsRef3 = 'leite,banana,aveia,leite_po,chia,creatina';
+  
   if (temFarinhaLactea) {
     ingredienteExtraVitamina = "<li>• 40g de Farinha Láctea 🌟</li>";
+    idsRef3 += ',farinha_lactea';
   } else if (temMucilon) {
     ingredienteExtraVitamina = "<li>• 40g de Mucilon 🌟</li>";
+    idsRef3 += ',mucilon';
   } else {
     ingredienteExtraVitamina = "<li>• +1 Banana Prata (Compensação)</li><li>• +20g de Aveia em Flocos (Compensação)</li>";
   }
 
+  // Mapeia os IDs das outras Refeições
+  const idsRef1 = (temPao ? 'pao' : 'batata_doce') + ',ovos';
+  const idsRef2 = 'arroz,feijao,frango';
+  const idsRef4 = 'arroz,feijao,frango';
+  const idsRef5 = (temIogurte ? 'iogurte' : 'ovos') + ',' + (temBatata ? 'batata_doce' : 'aveia,banana');
+
   const menuHTML = `
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
       <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Macros Calculados do Dia:</h4>
-      <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.300 kcal</strong> | Proteínas: <strong>~195g</strong> | Carboidratos: <strong>~450g</strong> | Gorduras: <strong>~80g</strong></p>
+      <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.300 kcal</strong> | Proteínas: <strong>~195g</strong> | Carboidratos: <strong>~450g</strong></p>
     </div>
 
     <div class="refeicao-card">
       <h3>🍳 Refeição 1: Café da Manhã</h3>
       <ul>
-        ${temPao ? `<li>• 2 Pães Franceses (100g)</li>` : `<li>• 200g de Batata Doce Cozida (Substituto do Pão)</li>`}
+        ${temPao ? `<li>• 2 Pães Franceses (100g)</li>` : `<li>• 200g de Batata Doce Cozida (Substituto)</li>`}
         <li>• 3 Ovos Inteiros mexidos ou cozidos</li>
         <li>• Café puro (opcional)</li>
       </ul>
+      <button id="btn-ref-1" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-1', '${idsRef1}')">⬜ Marcar como Consumida</button>
     </div>
 
     <div class="refeicao-card">
@@ -137,12 +166,13 @@ function gerarMenuDinamico() {
         <li>• 300g de Arroz Branco</li>
         <li>• 150g de Feijão Carioca</li>
         <li>• 180g de Peito de Frango</li>
-        <li>• Salada à vontade com 1 colher de sopa de Azeite (para bater as gorduras)</li>
+        <li>• Salada à vontade com Azeite</li>
       </ul>
+      <button id="btn-ref-2" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-2', '${idsRef2}')">⬜ Marcar como Consumida</button>
     </div>
 
     <div class="refeicao-card">
-      <h3>🥤 Refeição 3: Café da Tarde (A Super Vitamina)</h3>
+      <h3>🥤 Refeição 3: Café da Tarde (Vitamina)</h3>
       <ul>
         <li>• 300ml de Leite Integral</li>
         <li>• 1 Banana Prata</li>
@@ -152,6 +182,7 @@ function gerarMenuDinamico() {
         <li>• 5g de Creatina</li>
         ${ingredienteExtraVitamina}
       </ul>
+      <button id="btn-ref-3" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-3', '${idsRef3}')">⬜ Marcar como Consumida</button>
     </div>
 
     <div class="refeicao-card">
@@ -160,43 +191,27 @@ function gerarMenuDinamico() {
         <li>• 300g de Arroz Branco</li>
         <li>• 150g de Feijão Carioca</li>
         <li>• 180g de Peito de Frango</li>
-        <li>• Salada à vontade com 1 colher de sopa de Azeite</li>
+        <li>• Salada à vontade com Azeite</li>
       </ul>
+      <button id="btn-ref-4" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-4', '${idsRef4}')">⬜ Marcar como Consumida</button>
     </div>
 
     <div class="refeicao-card">
       <h3>🌙 Refeição 5: Ceia</h3>
       <ul>
-        ${temIogurte ? `<li>• 1 Pote de Iogurte Natural/Integral (170g)</li>` : `<li>• 2 Ovos Inteiros</li>`}
+        ${temIogurte ? `<li>• 1 Pote de Iogurte Natural (170g)</li>` : `<li>• 2 Ovos Inteiros</li>`}
         ${temBatata ? `<li>• 150g de Batata Doce</li>` : `<li>• 40g de Aveia com 1 Banana</li>`}
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Dica: Ótima combinação de carboidrato complexo com proteína leve para a noite.</p>
       </ul>
+      <button id="btn-ref-5" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-5', '${idsRef5}')">⬜ Marcar como Consumida</button>
     </div>
   `;
 
   containerMenu.innerHTML = menuHTML;
-  document.getElementById('btn-confirmar').style.display = 'block';
-}
 
-function confirmarConsumoDiario() {
-  const hoje = new Date().toISOString().split('T')[0];
-  menuDeHoje.forEach(item => {
-    const alimentoOriginal = alimentos.find(a => a.id === item.id);
-    if (alimentoOriginal) {
-      if (!alimentoOriginal.historico) alimentoOriginal.historico = [];
-      if (!alimentoOriginal.historico.includes(hoje)) {
-        alimentoOriginal.historico.push(hoje);
-      }
-    }
-  });
-
-  salvarEstoque();
-  const btn = document.getElementById('btn-confirmar');
-  btn.innerText = "✅ Salvo! Consumo Registrado.";
-  btn.style.backgroundColor = "#047857";
-  btn.disabled = true;
+  // Como agora o check é por refeição, o script esconde o botão "Confirmar Tudo" se ele ainda existir no seu HTML
+  const btnAntigo = document.getElementById('btn-confirmar');
+  if(btnAntigo) btnAntigo.style.display = 'none';
 }
 
 document.getElementById('btn-gerar').addEventListener('click', gerarMenuDinamico);
-document.getElementById('btn-confirmar').addEventListener('click', confirmarConsumoDiario);
 window.onload = carregarEstoque;

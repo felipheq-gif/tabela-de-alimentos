@@ -37,13 +37,46 @@
       </div>
     </section>
 
+    <!-- FORMULÁRIO PARA CADASTRAR NOVO ALIMENTO -->
+    <section class="card cadastro">
+      <h2>➕ Cadastrar Novo Alimento</h2>
+      <p class="subtext">Insira as informações nutricionais por 100g (ou por unidade):</p>
+      
+      <form id="form-alimento" class="form-grid">
+        <div class="input-group full">
+          <input type="text" id="nome-alimento" placeholder="Nome do Alimento (ex: Pão Integral)" required>
+        </div>
+        <div class="input-group">
+          <select id="cat-alimento" required>
+            <option value="proteina">Proteína</option>
+            <option value="carbo">Carboidrato</option>
+            <option value="gordura">Gordura</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <input type="number" id="kcal-alimento" placeholder="Kcal / 100g" step="0.1" required>
+        </div>
+        <div class="input-group">
+          <input type="number" id="prot-alimento" placeholder="Proteína (g)" step="0.1" required>
+        </div>
+        <div class="input-group">
+          <input type="number" id="carb-alimento" placeholder="Carbo (g)" step="0.1" required>
+        </div>
+        <div class="input-group">
+          <input type="number" id="gord-alimento" placeholder="Gordura (g)" step="0.1" required>
+        </div>
+
+        <button type="submit" class="btn-secondary">Cadastrar Alimento</button>
+      </form>
+    </section>
+
     <!-- GERENCIADOR DE ESTOQUE DE ALIMENTOS -->
     <section class="card estoque">
       <h2>📦 Alimentos no Estoque</h2>
       <p class="subtext">Marque o que você tem disponível em casa hoje:</p>
       
       <div id="lista-estoque" class="lista-checkboxes">
-        <!-- Os alimentos vão aparecer aqui dinamicamente -->
+        <!-- Os alimentos aparecem aqui dinamicamente -->
       </div>
 
       <button id="btn-gerar" class="btn-primary">🔄 Gerar Menu de Hoje</button>

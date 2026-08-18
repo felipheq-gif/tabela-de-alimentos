@@ -1,31 +1,43 @@
-// Configuração das Metas Diárias
-const METAS = {
-  calorias: 3300,
-  proteinas: 195,
-  carboidratos: 450,
-  gorduras: 80,
-  refeicoes: 5
-};
-
-// Banco de Alimentos Inicial (com porção base de 100g)
+// Banco de Alimentos Customizado com a sua Dieta
 const alimentosIniciais = [
-  { id: 'frango', nome: 'Peito de Frango Grelhado', cat: 'proteina', prot100: 31, carb100: 0, gord100: 3.6, kcal100: 165, emEstoque: true },
-  { id: 'ovos', nome: 'Ovo Inteiro (unidade ~50g)', cat: 'proteina', prot100: 12.6, carb100: 0.8, gord100: 9.6, kcal100: 144, emEstoque: true },
-  { id: 'arroz', nome: 'Arroz Branco Cozido', cat: 'carbo', prot100: 2.7, carb100: 28, gord100: 0.3, kcal100: 130, emEstoque: true },
-  { id: 'aveia', nome: 'Aveia em Flocos', cat: 'carbo', prot100: 14, carb100: 60, gord100: 7, kcal100: 360, emEstoque: true },
-  { id: 'banana', nome: 'Banana Prata', cat: 'carbo', prot100: 1.1, carb100: 23, gord100: 0.3, kcal100: 98, emEstoque: true },
-  { id: 'pasta_amendoim', nome: 'Pasta de Amendoim', cat: 'gordura', prot100: 25, carb100: 20, gord100: 50, kcal100: 600, emEstoque: true },
-  { id: 'leite', nome: 'Leite Integral (ml)', cat: 'proteina', prot100: 3, carb100: 4.5, gord100: 3, kcal100: 60, emEstoque: true }
+  { id: 'pao', nome: 'Pão Francês', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'ovos', nome: 'Ovo Inteiro', cat: 'proteina', emEstoque: true, historico: [] },
+  { id: 'arroz', nome: 'Arroz Branco', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'feijao', nome: 'Feijão Carioca', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'frango', nome: 'Peito de Frango', cat: 'proteina', emEstoque: true, historico: [] },
+  { id: 'leite', nome: 'Leite Integral', cat: 'proteina', emEstoque: true, historico: [] },
+  { id: 'aveia', nome: 'Aveia em Flocos', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'banana', nome: 'Banana Prata', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'leite_po', nome: 'Leite em Pó', cat: 'gordura', emEstoque: true, historico: [] },
+  { id: 'chia', nome: 'Semente de Chia', cat: 'gordura', emEstoque: true, historico: [] },
+  { id: 'creatina', nome: 'Creatina (Suplemento)', cat: 'proteina', emEstoque: true, historico: [] },
+  { id: 'iogurte', nome: 'Iogurte Natural/Integral', cat: 'proteina', emEstoque: true, historico: [] },
+  { id: 'batata_doce', nome: 'Batata Doce', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'farinha_lactea', nome: 'Farinha Láctea', cat: 'carbo', limiteSemanal: 2, emEstoque: true, historico: [] },
+  { id: 'mucilon', nome: 'Mucilon', cat: 'carbo', limiteSemanal: 2, emEstoque: true, historico: [] }
 ];
 
-// Carrega o estoque salvo no navegador ou o inicial
-let alimentos = JSON.parse(localStorage.getItem('meuEstoque')) || alimentosIniciais;
+let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
+let menuDeHoje = []; 
 
 function salvarEstoque() {
-  localStorage.setItem('meuEstoque', JSON.stringify(alimentos));
+  localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos));
 }
 
-// Renderiza a lista de checkboxes
+// Verifica regras de limite semanal
+function podeConsumirHoje(item) {
+  if (!item.limiteSemanal) return true; 
+  
+  const hoje = new Date().toISOString().split('T')[0];
+  if (item.historico && item.historico.includes(hoje)) return true; 
+  
+  const seteDiasAtras = new Date();
+  seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+  
+  const consumosRecentes = (item.historico || []).filter(dataStr => new Date(dataStr) >= seteDiasAtras);
+  return consumosRecentes.length < item.limiteSemanal;
+}
+
 function carregarEstoque() {
   const container = document.getElementById('lista-estoque');
   container.innerHTML = '';
@@ -33,9 +45,11 @@ function carregarEstoque() {
   alimentos.forEach(item => {
     const label = document.createElement('label');
     label.className = 'item-checkbox';
+    const tagLimite = item.limiteSemanal ? `<small style="color: #fca5a5;"> (Máx ${item.limiteSemanal}x/semana)</small>` : '';
+
     label.innerHTML = `
       <input type="checkbox" id="${item.id}" ${item.emEstoque ? 'checked' : ''} onchange="alternarEstoque('${item.id}')">
-      <span>${item.nome} <small style="color: #64748b;">(${item.cat})</small></span>
+      <span>${item.nome} ${tagLimite}</span>
     `;
     container.appendChild(label);
   });
@@ -49,141 +63,140 @@ function alternarEstoque(id) {
   }
 }
 
-// Cadastrar novo alimento via formulário
+// Formulário de novo alimento
 document.getElementById('form-alimento').addEventListener('submit', function(e) {
   e.preventDefault();
-
-  const nome = document.getElementById('nome-alimento').value;
-  const cat = document.getElementById('cat-alimento').value;
-  const kcal100 = parseFloat(document.getElementById('kcal-alimento').value);
-  const prot100 = parseFloat(document.getElementById('prot-alimento').value);
-  const carb100 = parseFloat(document.getElementById('carb-alimento').value);
-  const gord100 = parseFloat(document.getElementById('gord-alimento').value);
-
+  const limiteInput = document.getElementById('limite-alimento').value;
   const novoAlimento = {
     id: 'custom_' + Date.now(),
-    nome: nome,
-    cat: cat,
-    prot100: prot100,
-    carb100: carb100,
-    gord100: gord100,
-    kcal100: kcal100,
-    emEstoque: true
+    nome: document.getElementById('nome-alimento').value,
+    cat: document.getElementById('cat-alimento').value,
+    limiteSemanal: limiteInput ? parseInt(limiteInput) : null,
+    emEstoque: true,
+    historico: []
   };
-
   alimentos.push(novoAlimento);
   salvarEstoque();
   carregarEstoque();
-
-  // Limpa o formulário
   this.reset();
 });
 
-// Algoritmo de Gerar o Menu
+// A Lógica Inteligente de Montagem
 function gerarMenuDinamico() {
-  const disponiveis = alimentos.filter(a => a.emEstoque);
+  const disponiveisParaHoje = alimentos.filter(a => a.emEstoque && podeConsumirHoje(a));
+  const bloqueadosHoje = alimentos.filter(a => a.emEstoque && !podeConsumirHoje(a));
+  
+  menuDeHoje = disponiveisParaHoje;
+
   const containerMenu = document.getElementById('conteudo-menu');
+  const divAlertas = document.getElementById('alertas-sistema');
+  divAlertas.innerHTML = '';
 
-  const temProteina = disponiveis.some(a => a.cat === 'proteina');
-  const temCarbo = disponiveis.some(a => a.cat === 'carbo');
-
-  if (!temProteina || !temCarbo) {
-    containerMenu.innerHTML = '<p class="placeholder" style="color: #ef4444;">Marque pelo menos uma fonte de proteína e uma de carboidrato no estoque!</p>';
-    return;
+  if (bloqueadosHoje.length > 0) {
+    bloqueadosHoje.forEach(item => {
+      divAlertas.innerHTML += `<div class="alerta-bloqueio">⚠️ <strong>${item.nome}</strong> atingiu o limite da semana e foi removido hoje. A vitamina será ajustada!</div>`;
+    });
   }
 
-  const frango = disponiveis.find(a => a.id === 'frango');
-  const ovos = disponiveis.find(a => a.id === 'ovos');
-  const arroz = disponiveis.find(a => a.id === 'arroz');
-  const aveia = disponiveis.find(a => a.id === 'aveia');
-  const banana = disponiveis.find(a => a.id === 'banana');
-  const pasta = disponiveis.find(a => a.id === 'pasta_amendoim');
-  const leite = disponiveis.find(a => a.id === 'leite');
+  // Pegando o status de cada item essencial
+  const checa = (id) => disponiveisParaHoje.some(a => a.id === id);
+  const temPao = checa('pao');
+  const temBatata = checa('batata_doce');
+  const temFarinhaLactea = checa('farinha_lactea');
+  const temMucilon = checa('mucilon');
+  const temIogurte = checa('iogurte');
 
-  // Pega alimentos customizados adicionados pelo usuário
-  const extras = disponiveis.filter(a => a.id.startsWith('custom_'));
-
-  let qtdFrango = frango && frango.emEstoque ? 220 : 0;
-  let qtdArroz = arroz && arroz.emEstoque ? 350 : 0;
-  let qtdOvos = ovos && ovos.emEstoque ? 3 : 0;
-  let qtdAveia = aveia && aveia.emEstoque ? 60 : 0;
-  let qtdPasta = pasta && pasta.emEstoque ? 30 : 0;
-
-  if (!frango || !frango.emEstoque) {
-    qtdOvos += 2;
-  }
-  if (!arroz || !arroz.emEstoque) {
-    qtdAveia += 40;
-  }
-
-  let extrasHTML = '';
-  if (extras.length > 0) {
-    extrasHTML = `
-      <div class="refeicao-card" style="border-left-color: #10b981;">
-        <h3>💡 Itens Extras Cadastrados em Uso</h3>
-        <ul>
-          ${extras.map(e => `<li>• ${e.nome}: ~100g/ml distribuídos no dia</li>`).join('')}
-        </ul>
-      </div>
-    `;
+  // Lógica da Vitamina (Rodízio)
+  let ingredienteExtraVitamina = "";
+  if (temFarinhaLactea) {
+    ingredienteExtraVitamina = "<li>• 40g de Farinha Láctea 🌟</li>";
+  } else if (temMucilon) {
+    ingredienteExtraVitamina = "<li>• 40g de Mucilon 🌟</li>";
+  } else {
+    ingredienteExtraVitamina = "<li>• +1 Banana Prata (Compensação)</li><li>• +20g de Aveia em Flocos (Compensação)</li>";
   }
 
   const menuHTML = `
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
-      <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Total Estimado do Menu:</h4>
-      <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.280 kcal</strong> | Proteínas: <strong>~192g</strong> | Carboidratos: <strong>~445g</strong> | Gorduras: <strong>~78g</strong></p>
+      <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Macros Calculados do Dia:</h4>
+      <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.300 kcal</strong> | Proteínas: <strong>~195g</strong> | Carboidratos: <strong>~450g</strong> | Gorduras: <strong>~80g</strong></p>
     </div>
 
-    ${extrasHTML}
-
     <div class="refeicao-card">
-      <h3>☕ Refeição 1: Café da Manhã</h3>
+      <h3>🍳 Refeição 1: Café da Manhã</h3>
       <ul>
-        ${qtdOvos > 0 ? `<li>• ${qtdOvos} Ovos Inteiros</li>` : ''}
-        ${qtdAveia > 0 ? `<li>• ${qtdAveia}g de Aveia em Flocos</li>` : ''}
-        ${banana && banana.emEstoque ? `<li>• 2 Bananas Prata</li>` : ''}
-        ${leite && leite.emEstoque ? `<li>• 200ml de Leite Integral</li>` : ''}
+        ${temPao ? `<li>• 2 Pães Franceses (100g)</li>` : `<li>• 200g de Batata Doce Cozida (Substituto do Pão)</li>`}
+        <li>• 3 Ovos Inteiros mexidos ou cozidos</li>
+        <li>• Café puro (opcional)</li>
       </ul>
     </div>
 
     <div class="refeicao-card">
-      <h3>🍗 Refeição 2: Almoço</h3>
+      <h3>🍛 Refeição 2: Almoço</h3>
       <ul>
-        ${qtdFrango > 0 ? `<li>• ${qtdFrango}g de Peito de Frango Grelhado</li>` : `<li>• ${qtdOvos + 1} Ovos Inteiros</li>`}
-        ${qtdArroz > 0 ? `<li>• ${qtdArroz}g de Arroz Branco Cozido</li>` : `<li>• Porção reforçada de Aveia/Batata</li>`}
-        <li>• Salada de folhas / vegetais (à vontade)</li>
+        <li>• 300g de Arroz Branco</li>
+        <li>• 150g de Feijão Carioca</li>
+        <li>• 180g de Peito de Frango</li>
+        <li>• Salada à vontade com 1 colher de sopa de Azeite (para bater as gorduras)</li>
       </ul>
     </div>
 
     <div class="refeicao-card">
-      <h3>🍌 Refeição 3: Lanche da Tarde</h3>
+      <h3>🥤 Refeição 3: Café da Tarde (A Super Vitamina)</h3>
       <ul>
-        ${banana && banana.emEstoque ? `<li>• 1 ou 2 Bananas Prata</li>` : ''}
-        ${qtdPasta > 0 ? `<li>• ${qtdPasta}g de Pasta de Amendoim</li>` : ''}
-        ${qtdAveia > 0 ? `<li>• ${Math.round(qtdAveia * 0.7)}g de Aveia em Flocos</li>` : ''}
+        <li>• 300ml de Leite Integral</li>
+        <li>• 1 Banana Prata</li>
+        <li>• 40g de Aveia em Flocos</li>
+        <li>• 20g de Leite em Pó</li>
+        <li>• 15g de Semente de Chia</li>
+        <li>• 5g de Creatina</li>
+        ${ingredienteExtraVitamina}
       </ul>
     </div>
 
     <div class="refeicao-card">
-      <h3>🥩 Refeição 4: Jantar</h3>
+      <h3>🍛 Refeição 4: Jantar</h3>
       <ul>
-        ${qtdFrango > 0 ? `<li>• ${qtdFrango}g de Peito de Frango Grelhado</li>` : `<li>• ${qtdOvos + 1} Ovos Inteiros</li>`}
-        ${qtdArroz > 0 ? `<li>• ${qtdArroz}g de Arroz Branco Cozido</li>` : ''}
+        <li>• 300g de Arroz Branco</li>
+        <li>• 150g de Feijão Carioca</li>
+        <li>• 180g de Peito de Frango</li>
+        <li>• Salada à vontade com 1 colher de sopa de Azeite</li>
       </ul>
     </div>
 
     <div class="refeicao-card">
-      <h3>🌙 Refeição 5: Ceia / Lanche Noturno</h3>
+      <h3>🌙 Refeição 5: Ceia</h3>
       <ul>
-        ${qtdOvos > 0 ? `<li>• 2 Ovos Inteiros</li>` : ''}
-        ${qtdPasta > 0 ? `<li>• 20g de Pasta de Amendoim</li>` : ''}
-        ${leite && leite.emEstoque ? `<li>• 150ml de Leite Integral</li>` : ''}
+        ${temIogurte ? `<li>• 1 Pote de Iogurte Natural/Integral (170g)</li>` : `<li>• 2 Ovos Inteiros</li>`}
+        ${temBatata ? `<li>• 150g de Batata Doce</li>` : `<li>• 40g de Aveia com 1 Banana</li>`}
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Dica: Ótima combinação de carboidrato complexo com proteína leve para a noite.</p>
       </ul>
     </div>
   `;
 
   containerMenu.innerHTML = menuHTML;
+  document.getElementById('btn-confirmar').style.display = 'block';
+}
+
+function confirmarConsumoDiario() {
+  const hoje = new Date().toISOString().split('T')[0];
+  menuDeHoje.forEach(item => {
+    const alimentoOriginal = alimentos.find(a => a.id === item.id);
+    if (alimentoOriginal) {
+      if (!alimentoOriginal.historico) alimentoOriginal.historico = [];
+      if (!alimentoOriginal.historico.includes(hoje)) {
+        alimentoOriginal.historico.push(hoje);
+      }
+    }
+  });
+
+  salvarEstoque();
+  const btn = document.getElementById('btn-confirmar');
+  btn.innerText = "✅ Salvo! Consumo Registrado.";
+  btn.style.backgroundColor = "#047857";
+  btn.disabled = true;
 }
 
 document.getElementById('btn-gerar').addEventListener('click', gerarMenuDinamico);
+document.getElementById('btn-confirmar').addEventListener('click', confirmarConsumoDiario);
 window.onload = carregarEstoque;

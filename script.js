@@ -25,7 +25,6 @@ const alimentosIniciais = [
 let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
 
 function pegarDataDeHoje() { return new Date().toLocaleDateString('pt-BR'); }
-
 function salvarEstoque() { localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos)); }
 
 function getBotoesConfirmados() {
@@ -49,7 +48,6 @@ function podeConsumirHoje(item) {
   
   const seteDiasAtras = new Date();
   seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-  
   const consumosRecentes = (item.historico || []).filter(dataStr => {
     const partes = dataStr.split('/');
     if(partes.length === 3) {
@@ -131,7 +129,7 @@ function carregarMenuSalvo() {
   }
 }
 
-// O CÉREBRO AGORA COM MATEMÁTICA REAL
+// O CÉREBRO COM COMPENSADOR CALÓRICO
 function gerarMenuDinamico() {
   const disponiveis = alimentos.filter(a => a.emEstoque && podeConsumirHoje(a));
   const bloqueados = alimentos.filter(a => a.emEstoque && !podeConsumirHoje(a));
@@ -153,7 +151,8 @@ function gerarMenuDinamico() {
 
   const liqVitamina = pegar('leite') || pegar('iogurte') || null;
   const frutaVitamina = pegar('banana') || pegar('aveia');
-  const extraVitamina = pegar('farinha_lactea') || pegar('mucilon') || pegar('aveia');
+  const temAveia = pegar('aveia'); // Voltou a aveia pra vitamina!
+  const extraVitamina = pegar('farinha_lactea') || pegar('mucilon') || null;
   const temCreatina = pegar('creatina');
   const temLeitePo = pegar('leite_po');
   const temChia = pegar('chia');
@@ -171,14 +170,26 @@ function gerarMenuDinamico() {
   const qtdCarboCafe = carboCafe.id === 'tapioca' ? '100g' : (carboCafe.id === 'batata_doce' ? '200g' : '2 unidades (100g)');
   
   // CÁLCULO DINÂMICO DE CALORIAS
-  let kcalRef1 = Math.round((carboCafe.id === 'pao' ? 290 : (carboCafe.id === 'tapioca' ? 240 : 172)) + (protCafe.id === 'ovos' ? 216 : 247));
+  let kcalRef1 = Math.round((carboCafe.id === 'pao' ? 290 : (carboCafe.id === 'tapioca' ? 240 : (carboCafe.id === 'aveia' ? 152 : 172))) + (protCafe.id === 'ovos' ? 216 : (protCafe.id === 'iogurte' ? 100 : 247)));
   let kcalRef2 = Math.round((carboPrinc.id === 'macarrao' ? 375 : (carboPrinc.id === 'batata_doce' ? 300 : 390)) + (leguminosa ? 114 : 0) + (protPrinc.id === 'ovos' ? 288 : (protPrinc.id === 'carne_moida' ? 400 : 297)) + 108);
-  let kcalRef3 = Math.round((liqVitamina ? (liqVitamina.id === 'leite' ? 180 : 100) : 0) + 80 + (extraVitamina.id === 'farinha_lactea' ? 164 : (extraVitamina.id === 'mucilon' ? 152 : 152)) + (temLeitePo ? 100 : 0) + (temChia ? 70 : 0));
+  let kcalRef3 = Math.round((liqVitamina ? (liqVitamina.id === 'leite' ? 180 : 100) : 0) + 80 + (temAveia ? 152 : 0) + (extraVitamina ? (extraVitamina.id === 'farinha_lactea' ? 164 : 152) : 0) + (temLeitePo ? 100 : 0) + (temChia ? 70 : 0));
   let kcalRef4 = kcalRef2; 
-  let kcalRef5 = Math.round((protCeia.id === 'ovos' ? 144 : (protCeia.id === 'iogurte' ? 100 : 90)) + (carboCeia.id === 'batata_doce' ? 129 : (carboCeia.id === 'aveia' ? 152 : 80)));
+  let kcalRef5 = Math.round((protCeia.id === 'ovos' ? 144 : (protCeia.id === 'iogurte' ? 100 : (protCeia.id === 'leite' ? 120 : 90))) + (carboCeia.id === 'batata_doce' ? 129 : (carboCeia.id === 'aveia' ? 152 : 80)));
   
   let totalKcalDia = kcalRef1 + kcalRef2 + kcalRef3 + kcalRef4 + kcalRef5;
-  const getIds = (...itens) => itens.filter(i => i).map(i => i.id).join(',');
+
+  // Lógica do Alerta de Déficit Calórico
+  let alertaCalorias = '';
+  if (totalKcalDia < 3250) {
+      let diff = 3300 - totalKcalDia;
+      alertaCalorias = `
+      <div style="background: #450a0a; border: 1px solid #991b1b; padding: 10px; border-radius: 6px; margin-top: 10px; color: #fca5a5; font-size: 13px;">
+        ⚠️ <strong>Déficit de ~${diff} kcal detectado:</strong><br>
+        <em>Dica: Adicione +1 colher de azeite numa das refeições salgadas ou +1 banana na ceia para bater a meta de ganho de massa hoje!</em>
+      </div>`;
+  }
+
+  const getIds = (...itens) => itens.filter(i => i && i.id).map(i => i.id).join(',');
 
   const botoesProntos = getBotoesConfirmados();
   const renderBotao = (id, ids) => {
@@ -190,6 +201,7 @@ function gerarMenuDinamico() {
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
       <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Total Calculado Agora:</h4>
       <p style="font-size: 14px; color: #cbd5e1;">Calorias estimadas: <strong>~${totalKcalDia} kcal</strong></p>
+      ${alertaCalorias}
     </div>
 
     <div class="refeicao-card">
@@ -218,12 +230,13 @@ function gerarMenuDinamico() {
       <ul>
         ${liqVitamina ? `<li>• 300ml de ${liqVitamina.nome}</li>` : '<li>• Água para bater</li>'}
         <li>• 1 unidade/porção de ${frutaVitamina.nome}</li>
-        <li>• 40g de ${extraVitamina.nome} 🌟</li>
+        ${temAveia ? `<li>• 40g de Aveia em Flocos</li>` : ''}
+        ${extraVitamina ? `<li>• 40g de ${extraVitamina.nome} 🌟</li>` : ''}
         ${temLeitePo ? `<li>• 20g de Leite em Pó</li>` : ''}
         ${temChia ? `<li>• 15g de Semente de Chia</li>` : ''}
         ${temCreatina ? `<li>• 5g de Creatina</li>` : ''}
       </ul>
-      ${renderBotao('btn-ref-3', getIds(liqVitamina, frutaVitamina, extraVitamina, temLeitePo, temChia, temCreatina))}
+      ${renderBotao('btn-ref-3', getIds(liqVitamina, frutaVitamina, temAveia, extraVitamina, temLeitePo, temChia, temCreatina))}
     </div>
 
     <div class="refeicao-card">
@@ -252,7 +265,6 @@ function gerarMenuDinamico() {
 }
 
 document.getElementById('btn-gerar').addEventListener('click', gerarMenuDinamico);
-
 window.onload = function() {
   carregarEstoque();
   carregarMenuSalvo();

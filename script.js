@@ -35,7 +35,7 @@ function salvarEstoque() {
 // SISTEMA DE MEMÓRIA DOS BOTÕES
 function getBotoesConfirmados() {
   const salvo = JSON.parse(localStorage.getItem('botoesClicadosHoje')) || {};
-  if (salvo.data !== pegarDataDeHoje()) return []; // Se virou o dia, zera a lista
+  if (salvo.data !== pegarDataDeHoje()) return []; 
   return salvo.botoes || [];
 }
 
@@ -124,7 +124,7 @@ function confirmarRefeicao(btnId, idsString) {
   });
   
   salvarEstoque();
-  salvarBotaoConfirmado(btnId); // Salva na memória de curto prazo
+  salvarBotaoConfirmado(btnId); 
   
   const btn = document.getElementById(btnId);
   btn.innerHTML = '✅ Refeição Consumida';
@@ -150,7 +150,6 @@ function carregarMenuSalvo() {
   }
 }
 
-// O CÉREBRO REALMENTE DINÂMICO
 function gerarMenuDinamico() {
   const disponiveis = alimentos.filter(a => a.emEstoque && podeConsumirHoje(a));
   const bloqueados = alimentos.filter(a => a.emEstoque && !podeConsumirHoje(a));
@@ -189,7 +188,6 @@ function gerarMenuDinamico() {
   
   const getIds = (...itens) => itens.filter(i => i).map(i => i.id).join(',');
 
-  // Função que constrói o botão verificando se ele já foi clicado hoje
   const botoesProntos = getBotoesConfirmados();
   const renderBotao = (id, ids) => {
     if (botoesProntos.includes(id)) {
@@ -205,7 +203,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍳 Refeição 1: Café da Manhã</h3>
+      <h3>🍳 Refeição 1: Café da Manhã (~500 kcal)</h3>
       <ul>
         <li>• ${qtdCarboCafe} de ${carboCafe.nome}</li>
         <li>• ${protCafe.id === 'ovos' ? '3 unidades' : '150g'} de ${protCafe.nome}</li>
@@ -215,7 +213,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 2: Almoço</h3>
+      <h3>🍛 Refeição 2: Almoço (~920 kcal)</h3>
       <ul>
         <li>• ${qtdCarboPrinc} de ${carboPrinc.nome}</li>
         ${leguminosa ? `<li>• 150g de ${leguminosa.nome}</li>` : ''}
@@ -226,7 +224,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🥤 Refeição 3: Café da Tarde (Vitamina)</h3>
+      <h3>🥤 Refeição 3: Café da Tarde (Vitamina) (~720 kcal)</h3>
       <ul>
         ${liqVitamina ? `<li>• 300ml de ${liqVitamina.nome}</li>` : '<li>• Água para bater (Falta Leite/Iogurte)</li>'}
         <li>• 1 unidade/porção de ${frutaVitamina.nome}</li>
@@ -237,7 +235,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 4: Jantar</h3>
+      <h3>🍛 Refeição 4: Jantar (~920 kcal)</h3>
       <ul>
         <li>• ${qtdCarboPrinc} de ${carboPrinc.nome}</li>
         ${leguminosa ? `<li>• 150g de ${leguminosa.nome}</li>` : ''}
@@ -248,7 +246,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🌙 Refeição 5: Ceia</h3>
+      <h3>🌙 Refeição 5: Ceia (~240 kcal)</h3>
       <ul>
         <li>• ${protCeia.id === 'ovos' ? '2 unidades' : '150g'} de ${protCeia.nome}</li>
         <li>• ${carboCeia.id === 'batata_doce' ? '150g' : '40g'} de ${carboCeia.nome}</li>

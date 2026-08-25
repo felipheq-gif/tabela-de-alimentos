@@ -7,7 +7,7 @@ const alimentosIniciais = [
   { id: 'feijao', nome: 'Feijão Carioca', cat: 'carbo', emEstoque: true, historico: [] },
   { id: 'batata_doce', nome: 'Batata Doce', cat: 'carbo', emEstoque: true, historico: [] },
   { id: 'aveia', nome: 'Aveia em Flocos', cat: 'carbo', emEstoque: true, historico: [] },
-  { id: 'banana', nome: 'Banana Prata/D\'água', cat: 'carbo', emEstoque: true, historico: [] },
+  { id: 'banana', nome: 'Banana', cat: 'carbo', emEstoque: true, historico: [] },
   { id: 'farinha_lactea', nome: 'Farinha Láctea', cat: 'carbo', limiteSemanal: 2, emEstoque: true, historico: [] },
   { id: 'mucilon', nome: 'Mucilon', cat: 'carbo', limiteSemanal: 2, emEstoque: true, historico: [] },
   
@@ -24,15 +24,10 @@ const alimentosIniciais = [
 
 let alimentos = JSON.parse(localStorage.getItem('meuEstoqueOficial')) || alimentosIniciais;
 
-function pegarDataDeHoje() {
-  return new Date().toLocaleDateString('pt-BR'); 
-}
+function pegarDataDeHoje() { return new Date().toLocaleDateString('pt-BR'); }
 
-function salvarEstoque() {
-  localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos));
-}
+function salvarEstoque() { localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos)); }
 
-// SISTEMA DE MEMÓRIA DOS BOTÕES
 function getBotoesConfirmados() {
   const salvo = JSON.parse(localStorage.getItem('botoesClicadosHoje')) || {};
   if (salvo.data !== pegarDataDeHoje()) return []; 
@@ -47,7 +42,6 @@ function salvarBotaoConfirmado(btnId) {
   }
 }
 
-// Regra do Limite Semanal
 function podeConsumirHoje(item) {
   if (!item.limiteSemanal) return true; 
   const hoje = pegarDataDeHoje();
@@ -70,12 +64,10 @@ function podeConsumirHoje(item) {
 function carregarEstoque() {
   const container = document.getElementById('lista-estoque');
   container.innerHTML = '';
-
   alimentos.forEach(item => {
     const label = document.createElement('label');
     label.className = 'item-checkbox';
     const tagLimite = item.limiteSemanal ? `<small style="color: #fca5a5;"> (Máx ${item.limiteSemanal}x/sem)</small>` : '';
-
     label.innerHTML = `
       <input type="checkbox" id="${item.id}" ${item.emEstoque ? 'checked' : ''} onchange="alternarEstoque('${item.id}')">
       <span>${item.nome} ${tagLimite}</span>
@@ -86,24 +78,20 @@ function carregarEstoque() {
 
 function alternarEstoque(id) {
   const item = alimentos.find(a => a.id === id);
-  if (item) {
-    item.emEstoque = !item.emEstoque;
-    salvarEstoque();
-  }
+  if (item) { item.emEstoque = !item.emEstoque; salvarEstoque(); }
 }
 
 document.getElementById('form-alimento').addEventListener('submit', function(e) {
   e.preventDefault();
   const limiteInput = document.getElementById('limite-alimento').value;
-  const novoAlimento = {
+  alimentos.push({
     id: 'custom_' + Date.now(),
     nome: document.getElementById('nome-alimento').value,
     cat: document.getElementById('cat-alimento').value,
     limiteSemanal: limiteInput ? parseInt(limiteInput) : null,
     emEstoque: true,
     historico: []
-  };
-  alimentos.push(novoAlimento);
+  });
   salvarEstoque();
   carregarEstoque();
   this.reset();
@@ -112,20 +100,15 @@ document.getElementById('form-alimento').addEventListener('submit', function(e) 
 function confirmarRefeicao(btnId, idsString) {
   const ids = idsString.split(',').filter(id => id); 
   const hoje = pegarDataDeHoje();
-  
   ids.forEach(id => {
     const item = alimentos.find(a => a.id === id);
     if (item) {
       if (!item.historico) item.historico = [];
-      if (!item.historico.includes(hoje)) {
-        item.historico.push(hoje);
-      }
+      if (!item.historico.includes(hoje)) item.historico.push(hoje);
     }
   });
-  
   salvarEstoque();
   salvarBotaoConfirmado(btnId); 
-  
   const btn = document.getElementById(btnId);
   btn.innerHTML = '✅ Refeição Consumida';
   btn.classList.add('confirmado');
@@ -134,14 +117,12 @@ function confirmarRefeicao(btnId, idsString) {
 }
 
 function salvarTelaDoMenu() {
-  const conteudo = document.getElementById('conteudo-menu').innerHTML;
-  localStorage.setItem('menuVisualSalvo', conteudo);
+  localStorage.setItem('menuVisualSalvo', document.getElementById('conteudo-menu').innerHTML);
   localStorage.setItem('dataDoMenuSalvo', pegarDataDeHoje());
 }
 
 function carregarMenuSalvo() {
-  const dataSalva = localStorage.getItem('dataDoMenuSalvo');
-  if (dataSalva === pegarDataDeHoje()) {
+  if (localStorage.getItem('dataDoMenuSalvo') === pegarDataDeHoje()) {
     const menuSalvo = localStorage.getItem('menuVisualSalvo');
     if (menuSalvo) document.getElementById('conteudo-menu').innerHTML = menuSalvo;
   } else {
@@ -150,6 +131,7 @@ function carregarMenuSalvo() {
   }
 }
 
+// O CÉREBRO AGORA COM MATEMÁTICA REAL
 function gerarMenuDinamico() {
   const disponiveis = alimentos.filter(a => a.emEstoque && podeConsumirHoje(a));
   const bloqueados = alimentos.filter(a => a.emEstoque && !podeConsumirHoje(a));
@@ -173,6 +155,8 @@ function gerarMenuDinamico() {
   const frutaVitamina = pegar('banana') || pegar('aveia');
   const extraVitamina = pegar('farinha_lactea') || pegar('mucilon') || pegar('aveia');
   const temCreatina = pegar('creatina');
+  const temLeitePo = pegar('leite_po');
+  const temChia = pegar('chia');
 
   const protCeia = pegar('iogurte') || pegar('ovos') || pegar('leite');
   const carboCeia = pegar('batata_doce') || pegar('aveia') || pegar('banana');
@@ -186,24 +170,30 @@ function gerarMenuDinamico() {
   const qtdProtPrinc = protPrinc.id === 'ovos' ? '4 unidades' : (protPrinc.id === 'carne_moida' ? '200g' : '180g');
   const qtdCarboCafe = carboCafe.id === 'tapioca' ? '100g' : (carboCafe.id === 'batata_doce' ? '200g' : '2 unidades (100g)');
   
+  // CÁLCULO DINÂMICO DE CALORIAS
+  let kcalRef1 = Math.round((carboCafe.id === 'pao' ? 290 : (carboCafe.id === 'tapioca' ? 240 : 172)) + (protCafe.id === 'ovos' ? 216 : 247));
+  let kcalRef2 = Math.round((carboPrinc.id === 'macarrao' ? 375 : (carboPrinc.id === 'batata_doce' ? 300 : 390)) + (leguminosa ? 114 : 0) + (protPrinc.id === 'ovos' ? 288 : (protPrinc.id === 'carne_moida' ? 400 : 297)) + 108);
+  let kcalRef3 = Math.round((liqVitamina ? (liqVitamina.id === 'leite' ? 180 : 100) : 0) + 80 + (extraVitamina.id === 'farinha_lactea' ? 164 : (extraVitamina.id === 'mucilon' ? 152 : 152)) + (temLeitePo ? 100 : 0) + (temChia ? 70 : 0));
+  let kcalRef4 = kcalRef2; 
+  let kcalRef5 = Math.round((protCeia.id === 'ovos' ? 144 : (protCeia.id === 'iogurte' ? 100 : 90)) + (carboCeia.id === 'batata_doce' ? 129 : (carboCeia.id === 'aveia' ? 152 : 80)));
+  
+  let totalKcalDia = kcalRef1 + kcalRef2 + kcalRef3 + kcalRef4 + kcalRef5;
   const getIds = (...itens) => itens.filter(i => i).map(i => i.id).join(',');
 
   const botoesProntos = getBotoesConfirmados();
   const renderBotao = (id, ids) => {
-    if (botoesProntos.includes(id)) {
-      return `<button id="${id}" class="btn-check-meal confirmado" disabled>✅ Refeição Consumida</button>`;
-    }
+    if (botoesProntos.includes(id)) return `<button id="${id}" class="btn-check-meal confirmado" disabled>✅ Refeição Consumida</button>`;
     return `<button id="${id}" class="btn-check-meal" onclick="confirmarRefeicao('${id}', '${ids}')">⬜ Marcar como Consumida</button>`;
   };
 
   const menuHTML = `
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
-      <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Macros Dinâmicos Calculados:</h4>
-      <p style="font-size: 14px; color: #cbd5e1;">Calorias: <strong>~3.300 kcal</strong> | Proteínas: <strong>~195g</strong></p>
+      <h4 style="color: #38bdf8; margin-bottom: 6px;">📊 Total Calculado Agora:</h4>
+      <p style="font-size: 14px; color: #cbd5e1;">Calorias estimadas: <strong>~${totalKcalDia} kcal</strong></p>
     </div>
 
     <div class="refeicao-card">
-      <h3>🍳 Refeição 1: Café da Manhã (~500 kcal)</h3>
+      <h3>🍳 Refeição 1: Café da Manhã (~${kcalRef1} kcal)</h3>
       <ul>
         <li>• ${qtdCarboCafe} de ${carboCafe.nome}</li>
         <li>• ${protCafe.id === 'ovos' ? '3 unidades' : '150g'} de ${protCafe.nome}</li>
@@ -213,7 +203,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 2: Almoço (~920 kcal)</h3>
+      <h3>🍛 Refeição 2: Almoço (~${kcalRef2} kcal)</h3>
       <ul>
         <li>• ${qtdCarboPrinc} de ${carboPrinc.nome}</li>
         ${leguminosa ? `<li>• 150g de ${leguminosa.nome}</li>` : ''}
@@ -224,18 +214,20 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🥤 Refeição 3: Café da Tarde (Vitamina) (~720 kcal)</h3>
+      <h3>🥤 Refeição 3: Café da Tarde (Vitamina) (~${kcalRef3} kcal)</h3>
       <ul>
-        ${liqVitamina ? `<li>• 300ml de ${liqVitamina.nome}</li>` : '<li>• Água para bater (Falta Leite/Iogurte)</li>'}
+        ${liqVitamina ? `<li>• 300ml de ${liqVitamina.nome}</li>` : '<li>• Água para bater</li>'}
         <li>• 1 unidade/porção de ${frutaVitamina.nome}</li>
         <li>• 40g de ${extraVitamina.nome} 🌟</li>
+        ${temLeitePo ? `<li>• 20g de Leite em Pó</li>` : ''}
+        ${temChia ? `<li>• 15g de Semente de Chia</li>` : ''}
         ${temCreatina ? `<li>• 5g de Creatina</li>` : ''}
       </ul>
-      ${renderBotao('btn-ref-3', getIds(liqVitamina, frutaVitamina, extraVitamina, temCreatina))}
+      ${renderBotao('btn-ref-3', getIds(liqVitamina, frutaVitamina, extraVitamina, temLeitePo, temChia, temCreatina))}
     </div>
 
     <div class="refeicao-card">
-      <h3>🍛 Refeição 4: Jantar (~920 kcal)</h3>
+      <h3>🍛 Refeição 4: Jantar (~${kcalRef4} kcal)</h3>
       <ul>
         <li>• ${qtdCarboPrinc} de ${carboPrinc.nome}</li>
         ${leguminosa ? `<li>• 150g de ${leguminosa.nome}</li>` : ''}
@@ -246,7 +238,7 @@ function gerarMenuDinamico() {
     </div>
 
     <div class="refeicao-card">
-      <h3>🌙 Refeição 5: Ceia (~240 kcal)</h3>
+      <h3>🌙 Refeição 5: Ceia (~${kcalRef5} kcal)</h3>
       <ul>
         <li>• ${protCeia.id === 'ovos' ? '2 unidades' : '150g'} de ${protCeia.nome}</li>
         <li>• ${carboCeia.id === 'batata_doce' ? '150g' : '40g'} de ${carboCeia.nome}</li>

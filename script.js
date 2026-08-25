@@ -1,4 +1,4 @@
-// Banco de Alimentos Customizado com a sua Dieta + Opções de Ganho de Massa
+// Banco de Alimentos Customizado
 const alimentosIniciais = [
   { id: 'pao', nome: 'Pão Francês', cat: 'carbo', emEstoque: true, historico: [] },
   { id: 'tapioca', nome: 'Tapioca', cat: 'carbo', emEstoque: true, historico: [] },
@@ -30,6 +30,21 @@ function pegarDataDeHoje() {
 
 function salvarEstoque() {
   localStorage.setItem('meuEstoqueOficial', JSON.stringify(alimentos));
+}
+
+// SISTEMA DE MEMÓRIA DOS BOTÕES
+function getBotoesConfirmados() {
+  const salvo = JSON.parse(localStorage.getItem('botoesClicadosHoje')) || {};
+  if (salvo.data !== pegarDataDeHoje()) return []; // Se virou o dia, zera a lista
+  return salvo.botoes || [];
+}
+
+function salvarBotaoConfirmado(btnId) {
+  const botoes = getBotoesConfirmados();
+  if (!botoes.includes(btnId)) {
+    botoes.push(btnId);
+    localStorage.setItem('botoesClicadosHoje', JSON.stringify({ data: pegarDataDeHoje(), botoes: botoes }));
+  }
 }
 
 // Regra do Limite Semanal
@@ -95,7 +110,7 @@ document.getElementById('form-alimento').addEventListener('submit', function(e) 
 });
 
 function confirmarRefeicao(btnId, idsString) {
-  const ids = idsString.split(',').filter(id => id); // Remove vazios
+  const ids = idsString.split(',').filter(id => id); 
   const hoje = pegarDataDeHoje();
   
   ids.forEach(id => {
@@ -109,6 +124,8 @@ function confirmarRefeicao(btnId, idsString) {
   });
   
   salvarEstoque();
+  salvarBotaoConfirmado(btnId); // Salva na memória de curto prazo
+  
   const btn = document.getElementById(btnId);
   btn.innerHTML = '✅ Refeição Consumida';
   btn.classList.add('confirmado');
@@ -143,42 +160,43 @@ function gerarMenuDinamico() {
     `<div class="alerta-bloqueio">⚠️ <strong>${item.nome}</strong> atingiu o limite da semana e foi substituído.</div>`
   ).join('');
 
-  // Funções de busca inteligente
   const pegar = (id) => disponiveis.find(a => a.id === id);
   const pegarSubstituto = (cat, ignorarId) => disponiveis.find(a => a.cat === cat && a.id !== ignorarId);
 
-  // Seleção Dinâmica para Almoço/Jantar (Refeições Principais)
   const carboPrinc = pegar('arroz') || pegar('macarrao') || pegar('batata_doce') || pegarSubstituto('carbo');
   const protPrinc = pegar('frango') || pegar('carne_moida') || pegar('ovos') || pegarSubstituto('proteina');
   const leguminosa = pegar('feijao');
 
-  // Seleção Dinâmica para Café da Manhã
   const carboCafe = pegar('pao') || pegar('tapioca') || pegar('batata_doce') || pegar('aveia');
   const protCafe = pegar('ovos') || pegar('iogurte') || pegar('frango');
 
-  // Seleção Dinâmica para Vitamina
   const liqVitamina = pegar('leite') || pegar('iogurte') || null;
   const frutaVitamina = pegar('banana') || pegar('aveia');
   const extraVitamina = pegar('farinha_lactea') || pegar('mucilon') || pegar('aveia');
   const temCreatina = pegar('creatina');
 
-  // Seleção Dinâmica para Ceia
   const protCeia = pegar('iogurte') || pegar('ovos') || pegar('leite');
   const carboCeia = pegar('batata_doce') || pegar('aveia') || pegar('banana');
 
-  // Validação de Segurança
   if (!carboPrinc || !protPrinc) {
     containerMenu.innerHTML = '<p class="placeholder" style="color: #ef4444;">Falta proteína ou carboidrato no estoque para gerar o menu!</p>';
     return;
   }
 
-  // Gramaturas Dinâmicas (Ajusta dependendo do alimento escolhido)
   const qtdCarboPrinc = carboPrinc.id === 'macarrao' ? '250g' : (carboPrinc.id === 'batata_doce' ? '350g' : '300g');
   const qtdProtPrinc = protPrinc.id === 'ovos' ? '4 unidades' : (protPrinc.id === 'carne_moida' ? '200g' : '180g');
   const qtdCarboCafe = carboCafe.id === 'tapioca' ? '100g' : (carboCafe.id === 'batata_doce' ? '200g' : '2 unidades (100g)');
   
-  // Extraindo os IDs para salvar corretamente no botão de "Consumida"
   const getIds = (...itens) => itens.filter(i => i).map(i => i.id).join(',');
+
+  // Função que constrói o botão verificando se ele já foi clicado hoje
+  const botoesProntos = getBotoesConfirmados();
+  const renderBotao = (id, ids) => {
+    if (botoesProntos.includes(id)) {
+      return `<button id="${id}" class="btn-check-meal confirmado" disabled>✅ Refeição Consumida</button>`;
+    }
+    return `<button id="${id}" class="btn-check-meal" onclick="confirmarRefeicao('${id}', '${ids}')">⬜ Marcar como Consumida</button>`;
+  };
 
   const menuHTML = `
     <div style="background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
@@ -193,7 +211,7 @@ function gerarMenuDinamico() {
         <li>• ${protCafe.id === 'ovos' ? '3 unidades' : '150g'} de ${protCafe.nome}</li>
         <li>• Café puro (opcional)</li>
       </ul>
-      <button id="btn-ref-1" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-1', '${getIds(carboCafe, protCafe)}')">⬜ Marcar como Consumida</button>
+      ${renderBotao('btn-ref-1', getIds(carboCafe, protCafe))}
     </div>
 
     <div class="refeicao-card">
@@ -204,7 +222,7 @@ function gerarMenuDinamico() {
         <li>• ${qtdProtPrinc} de ${protPrinc.nome}</li>
         <li>• Salada à vontade com 1 col. de Azeite</li>
       </ul>
-      <button id="btn-ref-2" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-2', '${getIds(carboPrinc, leguminosa, protPrinc)}')">⬜ Marcar como Consumida</button>
+      ${renderBotao('btn-ref-2', getIds(carboPrinc, leguminosa, protPrinc))}
     </div>
 
     <div class="refeicao-card">
@@ -215,7 +233,7 @@ function gerarMenuDinamico() {
         <li>• 40g de ${extraVitamina.nome} 🌟</li>
         ${temCreatina ? `<li>• 5g de Creatina</li>` : ''}
       </ul>
-      <button id="btn-ref-3" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-3', '${getIds(liqVitamina, frutaVitamina, extraVitamina, temCreatina)}')">⬜ Marcar como Consumida</button>
+      ${renderBotao('btn-ref-3', getIds(liqVitamina, frutaVitamina, extraVitamina, temCreatina))}
     </div>
 
     <div class="refeicao-card">
@@ -226,7 +244,7 @@ function gerarMenuDinamico() {
         <li>• ${qtdProtPrinc} de ${protPrinc.nome}</li>
         <li>• Salada à vontade com 1 col. de Azeite</li>
       </ul>
-      <button id="btn-ref-4" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-4', '${getIds(carboPrinc, leguminosa, protPrinc)}')">⬜ Marcar como Consumida</button>
+      ${renderBotao('btn-ref-4', getIds(carboPrinc, leguminosa, protPrinc))}
     </div>
 
     <div class="refeicao-card">
@@ -235,7 +253,7 @@ function gerarMenuDinamico() {
         <li>• ${protCeia.id === 'ovos' ? '2 unidades' : '150g'} de ${protCeia.nome}</li>
         <li>• ${carboCeia.id === 'batata_doce' ? '150g' : '40g'} de ${carboCeia.nome}</li>
       </ul>
-      <button id="btn-ref-5" class="btn-check-meal" onclick="confirmarRefeicao('btn-ref-5', '${getIds(protCeia, carboCeia)}')">⬜ Marcar como Consumida</button>
+      ${renderBotao('btn-ref-5', getIds(protCeia, carboCeia))}
     </div>
   `;
 
